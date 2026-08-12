@@ -68,6 +68,7 @@ DEFAULTS = {
     "機關": "○○○○○○（機關全銜）",
     "案名": "○○○○○○○○（案名）",
     "廠商": "○○○○股份有限公司",
+    "承辦單位": "○○○○（承辦單位）",
     "版本": "v1.0",
     "日期": "○○○ 年 ○○ 月 ○○ 日",
     "文件編號": "【待填】",
@@ -160,7 +161,7 @@ def bottom_border(paragraph):
     ppr.append(borders)
 
 
-def build_cover(doc, meta, doc_title):
+def build_cover(doc, meta, doc_title, agency_side=False):
     for _ in range(4):
         add_para(doc)
     add_para(doc, meta["機關"], size=20, bold=True,
@@ -171,9 +172,12 @@ def build_cover(doc, meta, doc_title):
     add_para(doc, doc_title, size=24, bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
     for _ in range(6):
         add_para(doc)
+    # 機關端文件（如工作說明書）由機關發出，封面列承辦單位而非承辦廠商。
+    responsible = (f"承辦單位：{meta['承辦單位']}" if agency_side
+                   else f"承辦廠商：{meta['廠商']}")
     for line in (f"版　　本：{meta['版本']}",
                  f"文件編號：{meta['文件編號']}",
-                 f"承辦廠商：{meta['廠商']}",
+                 responsible,
                  f"中華民國 {meta['日期']}"):
         add_para(doc, line, size=14, align=WD_ALIGN_PARAGRAPH.RIGHT)
     doc.add_page_break()
@@ -312,6 +316,8 @@ def render_markdown(doc, md_text, captions=True):
 
 def build_document(src: Path, meta: dict, captions=True) -> tuple:
     title = re.sub(r"^\d+-", "", src.stem).replace("骨架", "").strip()
+    text = src.read_text(encoding="utf-8")
+    agency_side = "（機關端）" in text.split("\n", 1)[0]
 
     doc = Document()
     sec = doc.sections[0]
@@ -319,10 +325,10 @@ def build_document(src: Path, meta: dict, captions=True) -> tuple:
     sec.left_margin = sec.right_margin = Cm(3.17)
     build_header_footer(sec, meta["機關"], meta["案名"])
 
-    build_cover(doc, meta, title)
+    build_cover(doc, meta, title, agency_side=agency_side)
     build_version_table(doc)
     build_toc(doc)
-    render_markdown(doc, src.read_text(encoding="utf-8"), captions=captions)
+    render_markdown(doc, text, captions=captions)
     return doc, title
 
 
@@ -342,6 +348,7 @@ def main():
     ap.add_argument("--機關", dest="agency")
     ap.add_argument("--案名", dest="project")
     ap.add_argument("--廠商", dest="vendor")
+    ap.add_argument("--承辦單位", dest="unit", help="機關端骨架（13）的封面用")
     ap.add_argument("--版本", dest="version")
     ap.add_argument("--日期", dest="date")
     ap.add_argument("--文件編號", dest="docno")
@@ -367,7 +374,8 @@ def main():
             print(f"警告：JSON 中有未使用的欄位：{'、'.join(sorted(unknown))}", file=sys.stderr)
         meta.update({k: str(v) for k, v in raw.items() if k in DEFAULTS})
     for key, val in (("機關", args.agency), ("案名", args.project), ("廠商", args.vendor),
-                     ("版本", args.version), ("日期", args.date), ("文件編號", args.docno)):
+                     ("承辦單位", args.unit), ("版本", args.version), ("日期", args.date),
+                     ("文件編號", args.docno)):
         if val:
             meta[key] = val
 

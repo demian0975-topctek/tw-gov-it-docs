@@ -1,0 +1,89 @@
+name: 官方來源查證
+
+# 工程會招標文件範本改版頻繁（投標須知範本近一年改了四次），
+# 本專案曾因此讓過時三年的版本號留在文件裡。此排程負責定期提醒。
+on:
+  schedule:
+    # 每月 1 日 01:00 UTC（台北時間 09:00）
+    - cron: '0 1 1 * *'
+  workflow_dispatch:        # 也可手動觸發
+
+permissions:
+  contents: read
+  issues: write             # 發現異動時開 issue
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # 腳本只用標準函式庫，不需安裝套件
+      - name: 比對官方來源
+        id: check
+        run: |
+          set +e
+          python skills/tw-gov-it-review/scripts/check_sources.py | tee result.txt
+          echo "exit_code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+
+      - name: 有異動時開 issue
+        if: steps.check.outputs.exit_code == '1'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const result = fs.readFileSync('result.txt', 'utf8');
+            const title = '官方來源異動：請人工確認現行版本';
+            const body = [
+              '排程查證發現官方頁面已出現更新版本。',
+              '',
+              '```',
+              result.trim(),
+              '```',
+              '',
+              '### 處理方式',
+              '',
+              '1. 開啟上列網址確認新版本的版本號與發布日期。',
+              '2. 更新 `skills/tw-gov-it-review/references/04-來源與查證.md` 的現行版本、識別字串、查證日期，並於「查證紀錄」加一列。',
+              '3. 同步 `skills/tw-gov-it-review/references/03-法規速查.md` 與 `README.md`「資料依據」中所有提及該版本之處。',
+              '4. 若異動的是《政府採購法》現行條文，全專案凡提及採購法之處都要複查。',
+              '5. 跑 `python tools/build_standalone.py` 重建兩份 STANDALONE.md。',
+              '',
+              '**在確認完成前，審查報告與文件初稿不得引用受影響的版本號。**',
+            ].join('\n');
+
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'source-check',
+            });
+
+            if (existing.data.length > 0) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title,
+                body,
+                labels: ['source-check'],
+              });
+            }
+
+      # 連不上官方網站不該讓排程顯示為失敗（政府網站偶有維護），
+      # 但確實查到異動時要讓 workflow 紅燈。
+      - name: 回報結果
+        if: steps.check.outputs.exit_code == '1'
+        run: |
+          echo "::error::官方來源有異動，已開 issue 追蹤"
+          exit 1
