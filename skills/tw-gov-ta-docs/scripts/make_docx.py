@@ -244,19 +244,11 @@ class Renderer:
 
             m = BLOCKQUOTE_RE.match(stripped)
             if m:
-                # 連續的 > 行合併成一段再解析行內 **粗體**，避免粗體標記跨行被行內解析切斷
-                quote_lines = [m.group(1)]
+                # > 區塊是骨架給撰寫者看的挖空／寫法指引，不是文件內容——
+                # 依規定填空提示不進入交付的 Word 檔，整段吃掉不輸出。
                 i += 1
-                while i < len(lines):
-                    nxt = lines[i].strip()
-                    m2 = BLOCKQUOTE_RE.match(nxt)
-                    if not m2:
-                        break
-                    quote_lines.append(m2.group(1))
+                while i < len(lines) and BLOCKQUOTE_RE.match(lines[i].strip()):
                     i += 1
-                p = self.doc.add_paragraph()
-                p.paragraph_format.left_indent = Cm(0.5)
-                add_runs_with_inline_bold(p, "".join(quote_lines), BODY_FONT, 10)
                 continue
 
             m = ORDERED_RE.match(stripped)
