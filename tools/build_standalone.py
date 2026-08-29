@@ -20,6 +20,7 @@ SKILLS_DIR = ROOT / "skills"
 TITLES = {
     "tw-gov-it-docs": "台灣政府資訊系統委外文件撰寫（完整版）",
     "tw-gov-it-review": "台灣政府資訊系統委外文件審查（完整版）",
+    "tw-gov-ta-docs": "顧問協辦工作說明書撰寫（完整版）",
 }
 
 HEADER = """# {title}
