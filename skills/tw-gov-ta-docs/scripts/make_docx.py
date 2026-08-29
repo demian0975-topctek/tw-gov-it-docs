@@ -46,9 +46,17 @@ HEAD_STYLE = {
 }
 BODY_SIZE = 12
 
+# 縮排：中文正式文件慣例是每加深一層條文（一／（一）／1．）多縮一階，
+# 內文段落另外加首行縮排 2 字元——政府公文排版的兩個基本規矩，都要落實，不能只做字體字級。
+FIRST_LINE_INDENT = Pt(24)    # 內文段落首行縮排（12pt 字體的 2 個全形字）
+IND_PAREN = Cm(0.5)           # （一）（二）… 這一層
+IND_LIST_L1 = Cm(0.5)         # 1. 2. 3. 直接接在節（一、二、三…）底下
+IND_LIST_L2 = Cm(1.0)         # 1. 2. 3. 接在（一）（二）…底下，多縮一階
+
 OUTPUT_NAME = "工作說明書_V0.0.docx"
 
 HEADING_RE = re.compile(r"^(#{2,4})\s+(.*)")
+PAREN_RE = re.compile(r"^（([一二三四五六七八九十]+)）\s*(.*)")
 ORDERED_RE = re.compile(r"^(\d+)\.\s+(.*)")
 TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
 BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)")
@@ -177,6 +185,7 @@ class Renderer:
         self.doc = doc
         self.chapter_no = 0     # 目前所在「壹、貳、參…」章序號（阿拉伯數字）
         self.caption_seq = {}   # {(kind, chapter_no): 已用序號}
+        self.in_paren = False   # 目前是否在（一）（二）…區塊內，決定底下 1. 2. 3. 要縮幾階
 
     def add_caption(self, kind, text):
         self.caption_seq[(kind, self.chapter_no)] = self.caption_seq.get((kind, self.chapter_no), 0) + 1
@@ -212,6 +221,7 @@ class Renderer:
                 text = m.group(2).strip()
                 if level == 2:
                     self.chapter_no += 1
+                self.in_paren = False
                 self._add_heading(level, text)
                 i += 1
                 continue
@@ -219,6 +229,16 @@ class Renderer:
             m = CAPTION_RE.match(stripped)
             if m:
                 self.add_caption(m.group(1), m.group(2))
+                i += 1
+                continue
+
+            m = PAREN_RE.match(stripped)
+            if m:
+                self.in_paren = True
+                size, bold = HEAD_STYLE[4]
+                p = self.doc.add_paragraph()
+                p.paragraph_format.left_indent = IND_PAREN
+                add_runs_with_inline_bold(p, f"（{m.group(1)}）{m.group(2)}", HEAD_FONT, size, bold)
                 i += 1
                 continue
 
@@ -242,12 +262,16 @@ class Renderer:
             m = ORDERED_RE.match(stripped)
             if m:
                 p = self.doc.add_paragraph()
-                p.paragraph_format.left_indent = Cm(0.6)
+                p.paragraph_format.left_indent = IND_LIST_L2 if self.in_paren else IND_LIST_L1
                 add_runs_with_inline_bold(p, f"{m.group(1)}.　{m.group(2)}", BODY_FONT, BODY_SIZE)
                 i += 1
                 continue
 
+            # 一般內文段落：首行縮排 2 字元；在（一）（二）…區塊內時，段落本身也跟著那一階的左縮排走
             p = self.doc.add_paragraph()
+            p.paragraph_format.first_line_indent = FIRST_LINE_INDENT
+            if self.in_paren:
+                p.paragraph_format.left_indent = IND_PAREN
             add_runs_with_inline_bold(p, stripped, BODY_FONT, BODY_SIZE)
             i += 1
 
