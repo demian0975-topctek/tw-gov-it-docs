@@ -27,7 +27,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
-from docx.shared import Twips, Pt, Cm
+from docx.shared import Twips, Pt
 
 # ---- V3.1 實測版面規格 ----
 MARGIN = Twips(1134)          # 上下左右邊界，實測值（工作說明書_V3.1.docx sectPr pgMar）
@@ -46,18 +46,23 @@ HEAD_STYLE = {
 }
 BODY_SIZE = 12
 
-# 縮排：中文正式文件慣例是每加深一層條文（一／（一）／1．）多縮一階，
-# 內文段落另外加首行縮排 2 字元——政府公文排版的兩個基本規矩，都要落實，不能只做字體字級。
-FIRST_LINE_INDENT = Pt(24)    # 內文段落首行縮排（12pt 字體的 2 個全形字）
-IND_PAREN = Cm(0.5)           # （一）（二）… 這一層
-IND_LIST_L1 = Cm(0.5)         # 1. 2. 3. 直接接在節（一、二、三…）底下
-IND_LIST_L2 = Cm(1.0)         # 1. 2. 3. 接在（一）（二）…底下，多縮一階
+# 縮排：政府文書處理手冊對分項條列縮排唯一明文的規定是「下一層應另列縮一格書寫」
+# （國家發展委員會《政府文書格式參考規範》）——沒有逐層字元數的官方對照表，網路流傳的
+# 那種「大項4字元/3字元、第一層7字元/3字元…」細表查無官方出處，其懸掛縮排算法本身也
+# 兜不攏（縮排−懸掛≠標號起始位置），不予採信。
+#
+# 這裡改用 Word 原生的字元縮排（w:leftChars／w:hangingChars，而非把 Pt/Cm 換算值硬塞進
+# left_indent 充數）落實「多縮一格」：1 字元＝內文字級（12pt）寬度，每深一層 leftChars+1；
+# 條列項目另加 hangingChars=1，讓標號貼齊上一層的內容起始位置，換行內容才對得齊標號，
+# 不是每行都跟標號同一個縮排。細節見 set_char_indent()。
+CHAR_UNIT_PT = BODY_SIZE
 
 OUTPUT_NAME = "工作說明書_V0.0.docx"
 
 HEADING_RE = re.compile(r"^(#{2,4})\s+(.*)")
 PAREN_RE = re.compile(r"^（([一二三四五六七八九十]+)）\s*(.*)")
 ORDERED_RE = re.compile(r"^(\d+)\.\s+(.*)")
+ORDERED_PAREN_RE = re.compile(r"^\((\d+)\)\s*(.*)")   # (1)(2)… 第四層，依官方規定用半形括號
 TABLE_ROW_RE = re.compile(r"^\|(.+)\|\s*$")
 BLOCKQUOTE_RE = re.compile(r"^>\s?(.*)")
 BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
@@ -76,6 +81,23 @@ def set_font(run, name=BODY_FONT, size=BODY_SIZE, bold=False):
     rfonts.set(qn("w:eastAsia"), name)
     rfonts.set(qn("w:ascii"), ASCII_FONT)
     rfonts.set(qn("w:hAnsi"), ASCII_FONT)
+
+
+def set_char_indent(paragraph, left_chars=None, hanging_chars=None, first_line_chars=None):
+    """套用 Word 原生的字元縮排（w:leftChars／w:hangingChars／w:firstLineChars），對應
+    Word 段落對話框「進階版面配置」勾選字元單位時寫出的屬性，不是拿絕對長度湊視覺效果。
+    同時换算寫入對應的絕對長度（w:left／w:hanging／w:firstLine）當備援，給不支援字元
+    單位的檢視器/轉檔器用；Word 開啟時仍以字元屬性為準。"""
+    ind = paragraph._p.get_or_add_pPr().get_or_add_ind()
+    if left_chars is not None:
+        ind.left = Pt(left_chars * CHAR_UNIT_PT)
+        ind.set(qn("w:leftChars"), str(left_chars * 100))
+    if hanging_chars is not None:
+        ind.hanging = Pt(hanging_chars * CHAR_UNIT_PT)
+        ind.set(qn("w:hangingChars"), str(hanging_chars * 100))
+    if first_line_chars is not None:
+        ind.firstLine = Pt(first_line_chars * CHAR_UNIT_PT)
+        ind.set(qn("w:firstLineChars"), str(first_line_chars * 100))
 
 
 def add_runs_with_inline_bold(p, text, font=BODY_FONT, size=BODY_SIZE, base_bold=False):
@@ -186,6 +208,7 @@ class Renderer:
         self.chapter_no = 0     # 目前所在「壹、貳、參…」章序號（阿拉伯數字）
         self.caption_seq = {}   # {(kind, chapter_no): 已用序號}
         self.in_paren = False   # 目前是否在（一）（二）…區塊內，決定底下 1. 2. 3. 要縮幾階
+        self.last_list_chars = 1  # 上一個 1.2.3 項目的 leftChars，(1)(2)… 接在它底下時再深一格
 
     def add_caption(self, kind, text):
         self.caption_seq[(kind, self.chapter_no)] = self.caption_seq.get((kind, self.chapter_no), 0) + 1
@@ -222,6 +245,7 @@ class Renderer:
                 if level == 2:
                     self.chapter_no += 1
                 self.in_paren = False
+                self.last_list_chars = 1
                 self._add_heading(level, text)
                 i += 1
                 continue
@@ -237,7 +261,7 @@ class Renderer:
                 self.in_paren = True
                 size, bold = HEAD_STYLE[4]
                 p = self.doc.add_paragraph()
-                p.paragraph_format.left_indent = IND_PAREN
+                set_char_indent(p, left_chars=1)
                 add_runs_with_inline_bold(p, f"（{m.group(1)}）{m.group(2)}", HEAD_FONT, size, bold)
                 i += 1
                 continue
@@ -253,17 +277,26 @@ class Renderer:
 
             m = ORDERED_RE.match(stripped)
             if m:
+                left_chars = 2 if self.in_paren else 1
+                self.last_list_chars = left_chars
                 p = self.doc.add_paragraph()
-                p.paragraph_format.left_indent = IND_LIST_L2 if self.in_paren else IND_LIST_L1
+                set_char_indent(p, left_chars=left_chars, hanging_chars=1)
                 add_runs_with_inline_bold(p, f"{m.group(1)}.　{m.group(2)}", BODY_FONT, BODY_SIZE)
+                i += 1
+                continue
+
+            m = ORDERED_PAREN_RE.match(stripped)
+            if m:
+                left_chars = self.last_list_chars + 1
+                p = self.doc.add_paragraph()
+                set_char_indent(p, left_chars=left_chars, hanging_chars=1)
+                add_runs_with_inline_bold(p, f"({m.group(1)})　{m.group(2)}", BODY_FONT, BODY_SIZE)
                 i += 1
                 continue
 
             # 一般內文段落：首行縮排 2 字元；在（一）（二）…區塊內時，段落本身也跟著那一階的左縮排走
             p = self.doc.add_paragraph()
-            p.paragraph_format.first_line_indent = FIRST_LINE_INDENT
-            if self.in_paren:
-                p.paragraph_format.left_indent = IND_PAREN
+            set_char_indent(p, left_chars=(1 if self.in_paren else None), first_line_chars=2)
             add_runs_with_inline_bold(p, stripped, BODY_FONT, BODY_SIZE)
             i += 1
 
