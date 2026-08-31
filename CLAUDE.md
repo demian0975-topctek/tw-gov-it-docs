@@ -1,7 +1,7 @@
 # 倉庫慣例
 
 只寫「讀程式碼看不出來、但寫錯會出事」的規矩。內容面的規範看 `README.md`，
-兩個 skill 各自的用法看它們的 `SKILL.md`。
+三個 skill 各自的用法看它們的 `SKILL.md`。
 
 ## 路徑一律相對於 skill 根目錄
 
@@ -18,12 +18,22 @@ references/07-機關端工作說明書.md 裡要指向同 skill 的 assets：
   ../../tw-gov-it-review/references/03-法規速查.md   ← 錯
 ```
 
-這是因為這些檔案會被組進 STANDALONE.md，也會被 skill 執行環境從根目錄載入。
+這是因為這些檔案會被組進單檔版，也會被 skill 執行環境從根目錄載入。
 新增檔案後值得驗一次所有連結解析得開。
 
-## STANDALONE.md 是產物，不要手改
+## skill 目錄只放執行期材料
 
-`skills/*/STANDALONE.md` 由 `tools/build_standalone.py` 從 SKILL.md ＋
+`skills/*/` 底下只能有 agent 執行時真的會用到的東西。兩類材料**不進 skill 目錄**：
+
+- **單檔版**（`dist/STANDALONE/*.md`）——另一個發佈通道的複本，見下。
+- **開發期溯源**（`docs/provenance/`）——查證 changelog、腳本設計理由、各節依據來源。
+  判準：這段話改變的是 agent 產出的內容（留在 skill），還是記錄了作者當初怎麼查到的（放 `docs/`）？
+
+**不要從 skill 檔案指向 `docs/`。** 一指過去內容就回到 agent 的可達範圍，而且單檔版組出來會斷鏈。
+
+## 單檔版是產物，不要手改
+
+`dist/STANDALONE/<skill>.md` 由 `tools/build_standalone.py` 從 SKILL.md ＋
 references ＋ assets 組出來，供上傳到 ChatGPT、Gemini 這類沒有檔案系統的環境。
 
 改過任何分檔後必跑：
@@ -110,8 +120,12 @@ docDefaults）。只看段落上有沒有明確設定，會漏掉空白表格列
 **寧可只寫法規全名而不寫版本，也不要寫錯版本。** 工程會範本改版頻繁——投標須知
 範本近一年改了四次，本倉庫曾讓過時三年的版本號留著。
 
-必須寫版本號時，以 `references/04-來源與查證.md` 為準並自行複查；查證後在該檔的
-「查證紀錄」加一列。腳本的 `[相符]` 只代表無須優先處理，不代表已確認為現行版。
+必須寫版本號時，以 `skills/tw-gov-it-review/references/04-來源與查證.md` 的【來源清單】
+為準並自行複查。腳本的 `[相符]` 只代表無須優先處理，不代表已確認為現行版。
+
+**查證後在 `docs/provenance/tw-gov-it-review-04-查證紀錄.md` 加一列，不要加回 skill 檔案**
+——查證 changelog 不改變審查結論，卻會被每個使用者載入。比對機制與識別字串挑法見
+`docs/provenance/check_sources-設計.md`。
 
 ## 未決事項
 
