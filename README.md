@@ -65,7 +65,6 @@ tw-gov-it-docs/
 ├── skills/
 │   ├── tw-gov-it-docs/                     # 撰寫
 │   │   ├── SKILL.md                        # 入口：流程與路由
-│   │   ├── STANDALONE.md                   # 單檔完整版（供上傳用）
 │   │   ├── references/
 │   │   │   ├── 01-建議書.md                 # 建議書結構、需求回應對照表、常見扣分點
 │   │   │   ├── 02-交付文件規格.md            # 各交付文件的章節規格（最主要的內容）
@@ -85,18 +84,16 @@ tw-gov-it-docs/
 │   │                                       #   --範本 改比對機關給的 .docx 範本）
 │   ├── tw-gov-it-review/                   # 審核
 │   │   ├── SKILL.md                        # 入口：三道檢查與報告格式
-│   │   ├── STANDALONE.md
 │   │   ├── references/
 │   │   │   ├── 01-結構與格式.md              # 章節、追溯鏈、編號、版面與檔案格式、圖表、一致性＋檢核清單
 │   │   │   ├── 02-用語與表達.md              # 用字規則（檢查腳本的規則來源）＋檢核清單
 │   │   │   ├── 03-法規速查.md                # 法規速查表、已停止適用清單、資安與無障礙合規
-│   │   │   └── 04-來源與查證.md              # 官方來源清單與查證紀錄（查證腳本的來源）
+│   │   │   └── 04-來源與查證.md              # 官方來源清單（查證腳本的來源）
 │   │   └── scripts/
 │   │       ├── check_wording.py            # 用語檢查：簡體字、大陸用語、法律統一用字、標點、數字、廢止法規
 │   │       └── check_sources.py            # 來源查證：比對官方頁面上的範本與指引版本有無更新
 │   └── tw-gov-ta-docs/                     # 顧問協辦寫工作說明書（獨立、不依賴前兩個 skill）
 │       ├── SKILL.md                        # 入口：三步驟流程
-│       ├── STANDALONE.md
 │       ├── references/
 │       │   └── 01-顧問協辦工作說明書撰寫要點.md  # 訪談技巧、避免綁標、交付版本慣例、自我檢查
 │       ├── assets/
@@ -105,12 +102,22 @@ tw-gov-it-docs/
 │       └── scripts/
 │           ├── make_docx.py                # 骨架套範本，產生固定檔名 工作說明書_V0.0.docx
 │           └── check_outline.py            # 重算 Word 自動標號印成大綱，驗證有無跳層
+├── dist/STANDALONE/                        # 單檔完整版（供上傳用，自動產生）
+│   ├── tw-gov-it-docs.md
+│   ├── tw-gov-it-review.md
+│   └── tw-gov-ta-docs.md
+├── docs/
+│   ├── provenance/                         # 開發期溯源：查證 changelog、腳本設計理由、依據對照
+│   └── research/                           # 研究筆記
 └── tools/
-    ├── build_standalone.py                 # 重新產生每個 skill 的 STANDALONE.md（改分檔後必跑）
+    ├── build_standalone.py                 # 重新產生 dist/STANDALONE/（改分檔後必跑）
     └── make_template.py                    # 由結案案例 .docx 萃取版面產生範本（來源檔不進倉庫）
 ```
 
-> `STANDALONE.md` 由 `build_standalone.py` 自動產生，**請勿手動編輯**。改完任何分檔後執行 `python tools/build_standalone.py`；`--check` 可驗證是否為最新。
+> **`skills/*/` 只放執行期材料。** 單檔版與開發期溯源都刻意放在 skill 目錄外——它們對已完成的
+> skill 是無用資訊，留在裡面會被帶走 skill 的人一併拿到，也可能被 agent 誤開而占用上下文。
+
+> `dist/STANDALONE/*.md` 由 `build_standalone.py` 自動產生，**請勿手動編輯**。改完任何分檔後執行 `python tools/build_standalone.py`；`--check` 可驗證是否為最新。
 
 **`tw-gov-it-docs` 與 `tw-gov-it-review` 設計為成對安裝。** 撰寫端在查證法規名稱與確認用字時會讀審核端的參考檔（以 `../tw-gov-it-review/…` 相對路徑指過去），只裝其中一個會缺這一段。**`tw-gov-ta-docs` 完全自足**，不跨 skill 相依，單獨安裝即可使用。
 
@@ -133,15 +140,15 @@ cp -r skills/tw-gov-ta-docs ~/.claude/skills/
 
 **Claude（claude.ai）**
 1. 建立一個 Project
-2. 在 Project Knowledge 上傳 `STANDALONE.md`——`tw-gov-it-docs` 與 `tw-gov-it-review` 兩份成對上傳；`tw-gov-ta-docs` 是獨立情境，只在需要時單獨上傳
+2. 在 Project Knowledge 上傳 `dist/STANDALONE/` 底下的檔案——`tw-gov-it-docs.md` 與 `tw-gov-it-review.md` 成對上傳；`tw-gov-ta-docs.md` 是獨立情境，只在需要時單獨上傳
 3. 在該 Project 中開始對話
 
 **ChatGPT Projects / GPTs**
-上傳對應的 `STANDALONE.md` 作為 Knowledge，Instructions 填：
-> 你是台灣政府資訊系統委外文件撰寫與審查專家。撰寫依撰寫版 STANDALONE.md，審查依審查版 STANDALONE.md。動筆前先確認文件類型與來源 RFP，產出後跑一遍審查版的三道檢查。機關委由顧問協辦撰寫工作說明書時，改依 tw-gov-ta-docs 版 STANDALONE.md。
+上傳 `dist/STANDALONE/` 底下對應的檔案作為 Knowledge，Instructions 填：
+> 你是台灣政府資訊系統委外文件撰寫與審查專家。撰寫依 tw-gov-it-docs.md，審查依 tw-gov-it-review.md。動筆前先確認文件類型與來源 RFP，產出後跑一遍審查版的三道檢查。機關委由顧問協辦撰寫工作說明書時，改依 tw-gov-ta-docs.md。
 
 **Gemini Gems**
-將對應的 `STANDALONE.md` 內容貼入指示欄位。
+將 `dist/STANDALONE/` 底下對應檔案的內容貼入指示欄位。
 
 ## 使用範例
 
@@ -255,7 +262,7 @@ python skills/tw-gov-it-review/scripts/check_sources.py
 | 範圍 | 授權條款 |
 | --- | --- |
 | 程式碼（`scripts/`、`tools/` 下的 `.py`） | MIT |
-| 文件內容（`SKILL.md`、`STANDALONE.md`、`references/`、`assets/`、本 README） | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh_TW) |
+| 文件內容（`SKILL.md`、`references/`、`assets/`、`dist/`、`docs/`、本 README） | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/deed.zh_TW) |
 
 本專案**未轉載政府文件原文**：骨架章節、表格欄位、判斷方法與範例句均為依通用實務自行撰寫，引用之法規名稱、條號與版本號屬事實陳述。完整說明與免責聲明見 [LICENSE](LICENSE)。
 
