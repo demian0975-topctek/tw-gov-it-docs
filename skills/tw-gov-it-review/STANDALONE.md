@@ -3,10 +3,11 @@
 > 單檔完整版，供 ChatGPT Knowledge / Claude Project / Gemini Gems 上傳使用。
 > 本檔由 `tools/build_standalone.py` 自動產生，請勿手動編輯；要修改請改各分檔後重新產生。
 >
-> **路徑對照**：本檔已包含本 skill 全部 `references/` 的內容。內文提到
+> **路徑對照**：本檔已包含本 skill 全部 `references/` 的 Markdown 內容。內文提到
 > 「讀取 `references/○○.md`」時，請直接參照本檔下方對應的同名章節，不需要（也無法）另外開檔。
-> 內文提到 `scripts/` 的腳本、以及 `../` 開頭指向另一個 skill 的路徑，在單檔版中不存在；
-> 需要那些內容時請一併上傳另一份 STANDALONE.md。
+> 內文提到 `scripts/` 的腳本、`assets/` 的 `.docx` 範本、以及 `../` 開頭指向另一個 skill 的路徑，
+> 在單檔版中不存在——版面與自動標號要靠範本才做得出來，單檔版只能給出章節與條文，格式請自行套用
+> 機關既有的 Word 版面。需要另一個 skill 的內容時請一併上傳該 skill 的 STANDALONE.md。
 
 
 

@@ -51,7 +51,7 @@ jobs:
               '2. 更新 `skills/tw-gov-it-review/references/04-來源與查證.md` 的現行版本、識別字串、查證日期，並於「查證紀錄」加一列。',
               '3. 同步 `skills/tw-gov-it-review/references/03-法規速查.md` 與 `README.md`「資料依據」中所有提及該版本之處。',
               '4. 若異動的是《政府採購法》現行條文，全專案凡提及採購法之處都要複查。',
-              '5. 跑 `python tools/build_standalone.py` 重建兩份 STANDALONE.md。',
+              '5. 跑 `python tools/build_standalone.py` 重建三份 STANDALONE.md。',
               '',
               '**在確認完成前，審查報告與文件初稿不得引用受影響的版本號。**',
             ].join('\n');
