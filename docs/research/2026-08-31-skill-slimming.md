@@ -126,10 +126,10 @@
 
 `SKILL.md:33-43` 是 references 路由表（9 列），`SKILL.md:51-66` 是 assets 骨架表（14 列）。兩張表合計約 1,700 字元、約 1,200 est. tokens，占該檔近 30%。
 
-官方的 progressive disclosure Pattern 1／Pattern 2 示範的路由段落都只有四到五行（[Best practices §Progressive disclosure patterns](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)）。`assets/` 那 14 列的內容是「檔名 → 這份文件叫什麼」——**檔名本身已經寫著答案**（`assets/03-需求規格書骨架.md` 的用途欄寫「SRS」）。這正是 `writing-for-agents` 說的 cache：
+官方的 progressive disclosure Pattern 1／Pattern 2 示範的路由段落都只有四到五行（[Best practices §Progressive disclosure patterns](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)）。`assets/` 那 14 列的內容是「檔名 → 這份文件叫什麼」——**檔名本身已經寫著答案**（`assets/03-需求規格書骨架.md` 的用途欄寫「SRS」）。這正是外部撰寫規範說的 cache：
 
 > "The **environment** is a source of truth too […] and a document that restates it is a **cache** […] Leave the one-file, one-command lookups to the environment"
-> — `.claude/skills/writing-for-agents/SKILL.md:79`
+> — 撰寫規範 `writing-for-agents`〈Pruning〉節（倉庫外部材料，不隨本倉庫散布）
 
 做法：14 列縮成 3～4 行，只保留檔名看不出來的資訊（`00-共通元件` 每份都會用到、`07-系統管理手冊` 敏感度最高、`10-上線切換` App 不適用、`13-工作說明書` 是機關端）。其餘讓 agent `ls assets/` 自己看。
 
@@ -137,7 +137,7 @@
 
 ### 3-2【高】刪掉模型本來就會做的句子（no-op 獵殺）
 
-`writing-for-agents` 的檢驗法是「這句話有沒有改變預設行為」，且要求**整句刪掉而不是修短**（`.claude/skills/writing-for-agents/SKILL.md:81`）。官方也是同一句話：
+外部撰寫規範的檢驗法是「這句話有沒有改變預設行為」，且要求**整句刪掉而不是修短**。官方也是同一句話：
 
 > "Only add context Claude doesn't already have. Challenge each piece of information: 'Does Claude really need this explanation?'"
 > — [Best practices §Concise is key](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices)
@@ -146,7 +146,7 @@
 
 | 位置 | 內容 | 為什麼可能是 no-op |
 | --- | --- | --- |
-| `tw-gov-it-docs/SKILL.md:8` | 「協助廠商（或機關承辦人）產出符合…的資訊系統開發文件。」 | 身分陳述；`description` 已載明，`writing-great-skills` 明說 "Cut identity that's already in the body" 的反向也成立：body 不必重述 description |
+| `tw-gov-it-docs/SKILL.md:8` | 「協助廠商（或機關承辦人）產出符合…的資訊系統開發文件。」 | 身分陳述；`description` 已載明，外部撰寫規範明說 "Cut identity that's already in the body"，其反向也成立：body 不必重述 description |
 | `tw-gov-it-docs/SKILL.md:10` | 「這類文件的評分者不是工程師，而是評選委員與驗收小組…」整段 | 動機說明。但末句「本 skill 的核心不是把文件寫得漂亮，而是把**可追溯性**與**章節完整性**做到位」是 leading word，**要留** |
 | `tw-gov-it-docs/SKILL.md:84` | 「章節缺漏在驗收時是硬傷，比內容寫得普通嚴重得多。」 | 理由句，指令已在前一句 |
 | `tw-gov-it-docs/SKILL.md:131` | 「本 skill 產出的是初稿。正式送件前仍須經廠商內部覆核與機關承辦人確認，AI 不取代投標與履約的正式程序。」 | 免責聲明，不改變 agent 行為（三份 `SKILL.md` 各有一句同類） |
@@ -191,9 +191,9 @@
 
 驗證：`生成式 AI 參考指引` 在三份 `SKILL.md` ＋ `CLAUDE.md` 各出現一次；`機關版本` 出現 6 次；`編造` 出現 6 次。
 
-`writing-for-agents` 對此的判定是明確的：
+外部撰寫規範對此的判定是明確的：
 > "**Duplication** — the same meaning in more than one place — costs maintenance and tokens, and inflates a meaning's prominence on the ladder past its real rank."
-> — `.claude/skills/writing-for-agents/SKILL.md:78`
+> — 撰寫規範 `writing-for-agents`〈Pruning〉節（倉庫外部材料，不隨本倉庫散布）
 
 **但這裡有一個真實的張力，不要無腦收斂。** 三個 skill 是「各自獨立、彼此不互相依賴」（`tw-gov-ta-docs/SKILL.md:3` 的 description 明文承諾），把三條規矩抽成共用檔會製造依賴，違反該承諾，也違反官方的一層引用原則。
 
@@ -644,4 +644,5 @@ R4 的 `tw-gov-it-review` description 與 R1 **逐字相同**，卻差了 0.34�
 - [Equipping agents for the real world with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) — metadata 於 startup 預載進 system prompt
 - [Claude Code settings reference](https://code.claude.com/docs/en/settings-reference) — `skillListingBudgetFraction`、`skillListingMaxDescChars`
 - [anthropics/skills](https://github.com/anthropics/skills) — 實際 `SKILL.md` 範例（`docx`、`pdf`、`xlsx`、`skill-creator`、`mcp-builder`、`brand-guidelines`）、`package_skill.py` 的排除清單、repo 的 provenance 放置慣例
-- 本倉庫既有規範：`.claude/skills/writing-for-agents/SKILL.md`、`SKILL-MECHANICS.md`、`tw-gov-it-docs/.claude/skills/writing-great-skills/SKILL.md`、`tw-gov-it-docs/CLAUDE.md`
+- `CLAUDE.md` — 本倉庫的既有慣例
+- 撰寫規範 `writing-for-agents`（含 `SKILL-MECHANICS.md`）與 `writing-great-skills` — 研究當時作者本機的 agent 文件撰寫規範，**不隨本倉庫散布**，路徑不列
