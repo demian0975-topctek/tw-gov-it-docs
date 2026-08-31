@@ -29,9 +29,14 @@ JSON 格式（欄位皆可省略）：
       "文件編號": "ABC-SRS-001"
     }
 
-版面設定（各機關要求不同，可用參數覆寫）：
-    A4、上下 2.54cm 左右 3.17cm、內文標楷體 12pt、固定行高 20pt
+版面設定（各機關要求不同，機關有範本時以機關範本為準）：
+    A4、四邊邊界 2.5cm、內文標楷體 12pt、英數 Times New Roman、固定行高 18pt
     頁首置中「機關全銜　案名」、頁尾置中頁碼
+
+    邊界與行距取自「政府文書格式參考規範」（國發會，105.4.1 修正）第四點：
+    四邊 2.5cm±0.3cm；12 點字行距 15 點±3 點（取上限 18 點）。該規範第三點
+    的範圍是公文與證書獎狀，技術文件不在其內，此處採用是為了機關要求
+    「比照公文格式」時直接合規。依據與適用範圍見 references/06-Word範本.md。
     含封面、文件版本紀錄表、可自動更新的目錄與表目錄，以及圖目錄的位置與填法指引
 
 注意：目錄、表目錄與表格標號以 Word 功能變數產生，開啟檔案後需按 Ctrl+A 再按 F9
@@ -64,6 +69,12 @@ BODY_FONT = "標楷體"
 HEAD_FONT = "標楷體"
 ASCII_FONT = "Times New Roman"
 
+# 「政府文書格式參考規範」第四點：四邊 2.5cm±0.3cm；12 點字行距 15 點±3 點。
+# 行距取容許範圍上限，兼顧合規與可讀性。改這兩個值前先讀
+# references/06-Word範本.md 第二節，那裡有依據與適用範圍。
+MARGIN_CM = 2.5
+LINE_PT = 18
+
 DEFAULTS = {
     "機關": "○○○○○○（機關全銜）",
     "案名": "○○○○○○○○（案名）",
@@ -73,6 +84,29 @@ DEFAULTS = {
     "日期": "○○○ 年 ○○ 月 ○○ 日",
     "文件編號": "【待填】",
 }
+
+
+def set_normal_style(doc):
+    """把版面數值寫進 Normal 樣式，而不只是逐段逐 run 設。
+
+    骨架是拿來填的：空白表格列、空段落沒有 run，逐 run 設字型碰不到它們，
+    使用者一打字就會拿到 Word 預設的新細明體與單行行距。樣式是唯一管得到
+    「尚不存在的文字」的地方。
+    """
+    st = doc.styles["Normal"]
+    st.font.size = Pt(12)
+    rpr = st.element.get_or_add_rPr()
+    rfonts = rpr.find(qn("w:rFonts"))
+    if rfonts is None:
+        rfonts = OxmlElement("w:rFonts")
+        rpr.append(rfonts)
+    rfonts.set(qn("w:eastAsia"), BODY_FONT)
+    rfonts.set(qn("w:ascii"), ASCII_FONT)
+    rfonts.set(qn("w:hAnsi"), ASCII_FONT)
+    pf = st.paragraph_format
+    pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
+    pf.line_spacing = Pt(LINE_PT)
+    pf.space_after = Pt(0)
 
 
 def set_font(run, name=BODY_FONT, size=12, bold=False):
@@ -94,7 +128,7 @@ def add_para(doc, text="", size=12, bold=False, align=None, indent=0,
     p = doc.add_paragraph()
     pf = p.paragraph_format
     pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
-    pf.line_spacing = Pt(20)
+    pf.line_spacing = Pt(LINE_PT)
     pf.space_after = Pt(space_after)
     if indent:
         pf.left_indent = Cm(indent)
@@ -224,7 +258,7 @@ def add_caption(doc, kind, text="【待填：標題】"):
     p = doc.add_paragraph()
     pf = p.paragraph_format
     pf.line_spacing_rule = WD_LINE_SPACING.EXACTLY
-    pf.line_spacing = Pt(20)
+    pf.line_spacing = Pt(LINE_PT)
     pf.space_after = Pt(3)
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
     try:
@@ -321,8 +355,12 @@ def build_document(src: Path, meta: dict, captions=True) -> tuple:
 
     doc = Document()
     sec = doc.sections[0]
-    sec.top_margin = sec.bottom_margin = Cm(2.54)
-    sec.left_margin = sec.right_margin = Cm(3.17)
+    # python-docx 的內建範本是 US Letter（21.6×27.9cm），不設就不是 A4。
+    # 「政府文書格式參考規範」第四點（一）2 明定採 A4。
+    sec.page_width, sec.page_height = Cm(21.0), Cm(29.7)
+    sec.top_margin = sec.bottom_margin = Cm(MARGIN_CM)
+    sec.left_margin = sec.right_margin = Cm(MARGIN_CM)
+    set_normal_style(doc)
     build_header_footer(sec, meta["機關"], meta["案名"])
 
     build_cover(doc, meta, title, agency_side=agency_side)
@@ -368,7 +406,9 @@ def main():
 
     meta = dict(DEFAULTS)
     if args.json_path:
-        raw = json.loads(Path(args.json_path).read_text(encoding="utf-8"))
+        # utf-8-sig：本檔說明的 `--範例json > 專案.json` 在 Windows PowerShell
+        # 會寫出帶 BOM 的檔案，用 utf-8 讀會直接拋 JSONDecodeError。
+        raw = json.loads(Path(args.json_path).read_text(encoding="utf-8-sig"))
         unknown = set(raw) - set(DEFAULTS)
         if unknown:
             print(f"警告：JSON 中有未使用的欄位：{'、'.join(sorted(unknown))}", file=sys.stderr)

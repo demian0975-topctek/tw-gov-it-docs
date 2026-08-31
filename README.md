@@ -80,7 +80,9 @@ tw-gov-it-docs/
 │   │   │   ├── …                           # 02 專案執行計畫書 ～ 12 維護月報與 SLA
 │   │   │   └── 13-工作說明書骨架.md          # 機關端（其餘 00～12 為廠商端）
 │   │   └── scripts/
-│   │       └── make_docx_skeleton.py       # 由骨架產生 Word 空白範本
+│   │       ├── make_docx_skeleton.py       # 由骨架產生 Word 空白範本
+│   │       └── check_layout.py             # 驗 .docx 版面（判定值來源：06-Word範本.md；
+│   │                                       #   --範本 改比對機關給的 .docx 範本）
 │   ├── tw-gov-it-review/                   # 審核
 │   │   ├── SKILL.md                        # 入口：三道檢查與報告格式
 │   │   ├── STANDALONE.md

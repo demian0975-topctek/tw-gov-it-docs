@@ -50,7 +50,8 @@ Word**。骨架裡的標號只給人讀，`make_docx.py` 會剝掉再交給 Word
 ## 規則寫在表格，腳本只負責解析
 
 `check_wording.py` 的用字規則在 `references/02-用語與表達.md` 的【檢查規則】表格裡；
-`check_sources.py` 的來源清單在 `references/04-來源與查證.md` 的【來源清單】表格裡。
+`check_sources.py` 的來源清單在 `references/04-來源與查證.md` 的【來源清單】表格裡；
+`check_layout.py` 的版面判定值在 `references/06-Word範本.md` 的【版面檢查值】表格裡。
 
 **不要把規則寫進 .py**。要改規則改表格，人看得到、腳本讀得到，只有一份。
 新增這類腳本時沿用同樣的寫法。
@@ -63,13 +64,30 @@ python skills/tw-gov-it-review/scripts/check_sources.py --只看異動 --嚴格
 python tools/build_standalone.py && python tools/build_standalone.py --check
 ```
 
-動過 `tw-gov-ta-docs` 的骨架、範本或 `make_docx.py` 時，**產一份出來驗**——標號跳層不會讓
-腳本失敗，只會安靜地產出標號錯掉的檔案：
+動過任一支產 Word 的腳本、骨架或範本時，**產一份出來驗**——版面與標號的錯誤不會讓腳本
+失敗，只會安靜地產出格式壞掉的檔案：
 
 ```bash
+# tw-gov-it-docs：版面由腳本自己產，驗規範值
+python skills/tw-gov-it-docs/scripts/make_docx_skeleton.py 03 -o <暫存>/版面檢查.docx
+python skills/tw-gov-it-docs/scripts/check_layout.py <暫存>/版面檢查.docx
+
+# tw-gov-ta-docs：版面住在範本裡，驗有沒有偏離範本，並確認大綱逐層遞進
 python skills/tw-gov-ta-docs/scripts/make_docx.py <骨架.md> <暫存>
 python skills/tw-gov-ta-docs/scripts/check_outline.py <暫存>/工作說明書_V0.0.docx
+python skills/tw-gov-it-docs/scripts/check_layout.py --範本 \
+    skills/tw-gov-ta-docs/assets/工作說明書範本.docx <暫存>/工作說明書_V0.0.docx
 ```
+
+最後那道是**維護端的把關，不是 skill 之間的依賴**——`tw-gov-ta-docs` 的使用者流程不跑它，
+`SKILL.md` 裡也不會出現。倉庫維護者當然可以用倉庫裡任何一支腳本。
+
+**兩個模式不能互換。** 預設模式比對「政府文書格式參考規範」的公文版面；`tw-gov-ta-docs`
+的範本萃取自真實案件（四邊 2.0 公分、行距 20～24 點），與公文格式本來就不同，用預設模式
+驗會得到上百個假警報。`--範本` 驗的才是上面那條規矩：腳本有沒有蓋掉範本的版面。
+
+`check_layout.py` 驗的是 Word 繼承後的**有效值**（run → 段落 → 樣式 → Normal →
+docDefaults）。只看段落上有沒有明確設定，會漏掉空白表格列——那正是使用者要填字的地方。
 
 用字檢查有幾個字是**刻意不自動攔**的（紀錄／記錄、計畫／計劃、臺／台、程序、
 登錄、界面），要看詞性與對象人工判斷，自動改一定會錯——判斷表在
