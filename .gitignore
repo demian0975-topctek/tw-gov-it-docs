@@ -2,3 +2,7 @@
 __MACOSX/
 *.pyc
 __pycache__/
+
+# agent 開發設定。這是維護者本機的工作環境，取用 skill 的人不需要，
+# 留在倉庫裡會隨 clone 一併帶走。
+.claude/
