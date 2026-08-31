@@ -33,6 +33,20 @@ python tools/build_standalone.py          # 重建
 python tools/build_standalone.py --check  # 驗證是否為最新（離開碼可用於 CI）
 ```
 
+## 版面規格只存在範本裡，不要抄進腳本
+
+`skills/tw-gov-ta-docs/assets/工作說明書範本.docx` 是產物，由 `tools/make_template.py`
+從結案案例 Word 檔萃取（來源檔是真實案件，不進倉庫，路徑由執行者自備）。
+
+字體、字級、縮排、行距、頁面邊界、頁首頁尾、五層自動標號全部住在範本的 `styles.xml`
+與 `numbering.xml` 裡。`make_docx.py` 只掛樣式，**不要為了「調一下版面」在腳本裡寫
+Pt/Twips 數值**——那會變成兩份互相矛盾的版面規格，而 Word 開檔時以範本為準，腳本裡
+那份永遠看不出有沒有生效。要改版面就改範本後重跑 `make_template.py`。
+
+同理，標號是 Word 的自動編號，**不要在骨架 Markdown 或腳本裡把「壹、」當文字寫進
+Word**。骨架裡的標號只給人讀，`make_docx.py` 會剝掉再交給 Word 編。改完跑
+`skills/tw-gov-ta-docs/scripts/check_outline.py <產出.docx>` 驗大綱有無跳層。
+
 ## 規則寫在表格，腳本只負責解析
 
 `check_wording.py` 的用字規則在 `references/02-用語與表達.md` 的【檢查規則】表格裡；
@@ -47,6 +61,14 @@ python tools/build_standalone.py --check  # 驗證是否為最新（離開碼可
 python skills/tw-gov-it-review/scripts/check_wording.py --只看錯誤 <改過的檔案>
 python skills/tw-gov-it-review/scripts/check_sources.py --只看異動 --嚴格
 python tools/build_standalone.py && python tools/build_standalone.py --check
+```
+
+動過 `tw-gov-ta-docs` 的骨架、範本或 `make_docx.py` 時，**產一份出來驗**——標號跳層不會讓
+腳本失敗，只會安靜地產出標號錯掉的檔案：
+
+```bash
+python skills/tw-gov-ta-docs/scripts/make_docx.py <骨架.md> <暫存>
+python skills/tw-gov-ta-docs/scripts/check_outline.py <暫存>/工作說明書_V0.0.docx
 ```
 
 用字檢查有幾個字是**刻意不自動攔**的（紀錄／記錄、計畫／計劃、臺／台、程序、
