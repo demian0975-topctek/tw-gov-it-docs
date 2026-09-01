@@ -11,6 +11,7 @@
 | `check_sources-設計.md` | `skills/tw-gov-it-review/scripts/check_sources.py` 的比對機制與識別字串挑法 |
 | `tw-gov-it-review-04-查證紀錄.md` | `skills/tw-gov-it-review/references/04-來源與查證.md` 的歷次查證結果 |
 | `tw-gov-it-docs-07-依據對照.md` | `skills/tw-gov-it-docs/references/07-機關端工作說明書.md` 各節的依據等級 |
+| `tw-gov-ta-docs-骨架依據.md` | `skills/tw-gov-ta-docs/assets/工作說明書骨架.md` 各節出自哪個來源、分層動過哪些地方 |
 
 **不要從 skill 檔案指向這裡。** 一旦 `SKILL.md` 或 `references/` 出現指向 `docs/` 的連結，
 這些內容就又回到 agent 的可達範圍，而且 `STANDALONE.md` 組出來會是斷鏈。維護者從本檔進入即可。
